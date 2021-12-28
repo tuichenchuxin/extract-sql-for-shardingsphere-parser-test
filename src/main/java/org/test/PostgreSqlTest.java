@@ -105,6 +105,6 @@ public class PostgreSqlTest {
     
     protected void writeErrorSqlIntoFile(final String sql) throws IOException {
         Path path = Paths.get("src/main/resources/result/postgreSql.txt");
-        Files.write(path,(sql+"\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+        Files.write(path,(sql.trim() + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
     }
 }
