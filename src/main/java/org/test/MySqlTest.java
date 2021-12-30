@@ -15,8 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -26,13 +24,19 @@ public class MySqlTest {
     
     protected Long total = 0L;
     
+    private String delimiter = ";";
+    
+    private boolean isPerlSkip = false;
+    
+    private final StringBuilder multiLineSql = new StringBuilder();
+    
     private final CacheOption cacheOption = new CacheOption(128, 1024L, 4);
     private final SQLParserEngine parserEngine = new SQLParserEngine("MySQL", cacheOption, false);
     private final SQLVisitorEngine visitorEngine = new SQLVisitorEngine("MySQL", "STATEMENT", new Properties());
     
     void test() throws IOException {
         testSQLParse(Paths.get("src/main/resources/mysql"));
-//        textSqlParseEachFile(Paths.get("src/main/resources/mysql/partition_not_supported.test"));
+//        textSqlParseEachFile(Paths.get("src/main/resources/mysql/events_restart.test"));
         System.out.printf("MySQL Test passed amount %d, total amount %d, Passing rate is %s", passed, total, new BigDecimal(passed).divide(new BigDecimal(total), 5, RoundingMode.HALF_UP));
     }
     
@@ -40,57 +44,74 @@ public class MySqlTest {
         for (Path each : Files.list(path).collect(Collectors.toList())) {
             if (each.getFileName().toString().endsWith(".test")) {
                 textSqlParseEachFile(each);
-    
             }
         }
     }
     
     private void textSqlParseEachFile(final Path each) throws IOException {
-        String delimiter = ";";
-        boolean isPerlSkip = false;
         try {
             BufferedReader reader = Files.newBufferedReader(each);
             String line;
-            StringBuilder stringBuilder = new StringBuilder();
             while (null != (line = reader.readLine())) {
-                if (line.startsWith("--perl")) {
-                    isPerlSkip = true;
-                }
-                if (line.startsWith("EOF")) {
-                    isPerlSkip = false;
-                    continue;
-                }
-                if (isPerlSkip) {
-                    continue;
-                }
-                if (line.trim().startsWith("--") || line.trim().startsWith("#") || line.trim().equals("") || line.trim().startsWith("connection") || line.trim().startsWith("let") || line.trim().startsWith("eval")) {
-                    continue;
-                }
-                if (line.endsWith(delimiter)) {
-                    if (stringBuilder.length() == 0) {
-                        testParse(line);
-                    } else {
-                        stringBuilder.append(" ").append(line);
-                        testParse(stringBuilder.toString());
-                        stringBuilder.setLength(0);
-                    }
-                } else {
-                    if (stringBuilder.length() == 0) {
-                        stringBuilder.append(line);
-                    } else {
-                        stringBuilder.append(" ").append(line);
-                    }
-                    
-                }
-    
-                if (line.startsWith("delimiter")) {
+                line = line.trim();
+                if (handlePerl(line) || handleComment(line) || handleEmptyLine(line) || handleMySqlTestCommand(line)) continue;
+                handleThisLine(line);
+                if (line.startsWith("delimiter") || line.startsWith("DELIMITER")) {
                     delimiter = line.substring("delimiter".length() + 1, "delimiter".length() + 2);
                 }
             }
         } catch (Exception e) {
-            System.out.println("wrong carset" + each.getFileName().toString());
+            System.out.println("wrong charset" + each.getFileName().toString());
         }
-        
+    }
+    
+    private void handleThisLine(final String line) throws IOException {
+        if (line.endsWith(delimiter)) {
+            if (multiLineSql.length() == 0) {
+                testParse(fixDelimiter(line.substring(0, line.lastIndexOf(delimiter))));
+            } else {
+                multiLineSql.append(" ").append(line);
+                testParse(fixDelimiter(multiLineSql.substring(0, multiLineSql.lastIndexOf(delimiter))));
+                multiLineSql.setLength(0);
+            }
+        } else {
+            if (multiLineSql.length() == 0) {
+                multiLineSql.append(line);
+            } else {
+                multiLineSql.append(" ").append(line);
+            }
+        }
+    }
+    
+    private boolean handleMySqlTestCommand(final String line) {
+        return line.startsWith("connection") || line.startsWith("let") || line.startsWith("eval");
+    }
+    
+    private boolean handleEmptyLine(final String line) {
+        return line.equals("");
+    }
+    
+    private boolean handleComment(final String line) {
+        return line.startsWith("--") || line.startsWith("#");
+    }
+    
+    private boolean handlePerl(final String line) {
+        if (line.startsWith("--perl")) {
+            isPerlSkip = true;
+        }
+        if (line.startsWith("EOF")) {
+            isPerlSkip = false;
+            return true;
+        }
+        return isPerlSkip;
+    }
+    
+    private String fixDelimiter(final String line) {
+        if ((!line.endsWith("*/") && !line.endsWith("//")) 
+                && (line.endsWith("\\") || line.endsWith("$") || line.endsWith("/"))) {
+            return line.substring(0, line.length() - 1);
+        }
+        return line;
     }
     
     private void testParse(final String line) throws IOException {
