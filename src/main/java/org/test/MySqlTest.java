@@ -63,7 +63,7 @@ public class MySqlTest {
                 if (isPerlSkip) {
                     continue;
                 }
-                if (line.trim().startsWith("--") || line.trim().startsWith("#") || line.trim().equals("")) {
+                if (line.trim().startsWith("--") || line.trim().startsWith("#") || line.trim().equals("") || line.trim().startsWith("connection") || line.trim().startsWith("let") || line.trim().startsWith("eval")) {
                     continue;
                 }
                 if (line.endsWith(delimiter)) {
