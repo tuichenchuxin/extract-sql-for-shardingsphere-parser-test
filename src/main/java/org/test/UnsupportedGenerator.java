@@ -12,13 +12,24 @@ public class UnsupportedGenerator {
         String line;
         BufferedReader bufferedReader = Files.newBufferedReader(Paths.get("src/main/resources/generator/source.txt"));
         int count = 1;
+        String word = "";
         while(null != (line = bufferedReader.readLine())) {
             line = line.replace("&", "&amp;");
             line = line.replace("'", "&apos;");
             line = line.replace("\"", "&quot;");
             line = line.replace(">", "&gt;");
             line = line.replace("<", "&lt;");
-            String newLine = "<sql-case id=\"create_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
+            String name;
+            if (line.contains(" ")) {
+                name = line.substring(0, line.indexOf(" ")).toLowerCase();
+            } else {
+                name = line.toLowerCase();
+            }
+            if (!word.equals(name)) {
+                count = 1;
+                word = name;
+            }
+            String newLine = "<sql-case id=\"" + name + "_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
             write(newLine);
         }
     }

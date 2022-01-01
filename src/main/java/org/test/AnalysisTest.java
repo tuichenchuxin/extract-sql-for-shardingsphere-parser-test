@@ -15,7 +15,7 @@ import java.util.TreeMap;
 public class AnalysisTest {
     public static void main(String[] args) throws IOException {
         analysisMySql();
-//        analysisPostgreSql();
+        analysisPostgreSql();
     }
     
     public static void analysisMySql() throws IOException {
