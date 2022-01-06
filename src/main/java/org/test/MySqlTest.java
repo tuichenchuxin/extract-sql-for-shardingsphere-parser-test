@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -76,16 +77,27 @@ public class MySqlTest {
                 if (handleErrorParseTest(line.trim())) continue;
                 if (handleComment(line.trim())) continue;
                 if (handleFlowControl(line)) continue;
-                if (handleMySqlTestCommand(line.trim())) continue;
                 line = line.trim();
+                line = handTestCommandSubString(line);
+                if (line.isBlank()) continue;
                 handleThisLine(line);
                 if (line.startsWith("delimiter") || line.startsWith("DELIMITER")) {
-                    delimiter = line.substring("delimiter".length() + 1, "delimiter".length() + 2);
+                    delimiter = line.substring("delimiter".length() + 1, line.contains(delimiter) ? line.indexOf(delimiter) : delimiter.length() + 2);
                 }
             }
         } catch (Exception e) {
             System.out.println("wrong charset" + each.getFileName().toString());
         }
+    }
+    
+    private String handTestCommandSubString(final String line) {
+        if (line.startsWith("query_vertical ")) {
+            return line.substring(14).trim();
+        }
+        if (line.toLowerCase().startsWith("send")) {
+            return line.substring(4).trim();
+        }
+        return line;
     }
     
     private boolean handleFlowControl(final String line) throws IOException {
@@ -124,16 +136,20 @@ public class MySqlTest {
     
     private void handleThisLine(final String line) throws IOException {
         if (line.endsWith(delimiter)) {
-            if (isErrorParseTest) {
-                isErrorParseTest = false;
-                writeSkipSqlIntoFile(line);
-                return;
-            }
             if (multiLineSql.length() == 0) {
-                testParse(fixDelimiter(line.substring(0, line.lastIndexOf(delimiter))));
+                String sql = line.substring(0, line.lastIndexOf(delimiter));
+                if (handleNeedSkip(sql)) { 
+                    return;
+                }
+                testParse(sql);
             } else {
                 multiLineSql.append(" ").append(line);
-                testParse(fixDelimiter(multiLineSql.substring(0, multiLineSql.lastIndexOf(delimiter))));
+                String sql = multiLineSql.substring(0, multiLineSql.lastIndexOf(delimiter));
+                if (handleNeedSkip(sql)) {
+                    multiLineSql.setLength(0);
+                    return;
+                }
+                testParse(sql);
                 multiLineSql.setLength(0);
             }
         } else {
@@ -145,9 +161,29 @@ public class MySqlTest {
         }
     }
     
+    private boolean handleNeedSkip(final String line) throws IOException {
+        if (isErrorParseTest) {
+            isErrorParseTest = false;
+            writeSkipSqlIntoFile(line);
+            return true;
+        }
+        if (line.startsWith("/*") && line.endsWith("*/")) return true;
+        if (line.startsWith("!include ") || line.startsWith("!includedir")) return true;
+        if (line.toLowerCase().startsWith("help ")) return true;
+        if (line.startsWith("garbage")) return true;
+        if (line.startsWith("TYPE=")) return true;
+        if (line.startsWith("[auto] ") || line.startsWith("[client] ") || line.startsWith("[mysqld] ") || line.startsWith("[mysqlpump] ") || line.startsWith("[mysqltest1] ")) return true;
+        if (line.startsWith("query_attributes")) return true;
+        return handleMySqlTestCommand(line);
+    }
+    
     private boolean handleMySqlTestCommand(final String line) throws IOException {
-        // TODO judge with end delimiter
-        boolean result = line.startsWith("connection") || line.startsWith("let") || line.startsWith("eval") || line.startsWith("disconnect") || line.startsWith("connect ") || line.startsWith("connect(");
+        boolean result = line.toLowerCase().startsWith("connection") || line.toLowerCase().startsWith("let") || line.toLowerCase().startsWith("eval") || line.toLowerCase().startsWith("disconnect") || line.toLowerCase().startsWith("connect ") || line.startsWith("connect(") || line.startsWith("source")
+                || line.toLowerCase().startsWith("echo") || line.startsWith("remove_file") || line.toLowerCase().startsWith("reap") || line.toLowerCase().startsWith("disable_query_log") || line.toLowerCase().startsWith("enable_query_log") || line.toLowerCase().startsWith("dec ")
+                || line.startsWith("cat_file") || line.startsWith("change_user") || line.startsWith("copy_file") || line.startsWith("diff_files") || line.startsWith("dirty_close") || line.startsWith("disable_connect_log") || line.startsWith("enable_connect_log") || line.startsWith("disable_info")
+                || line.startsWith("enable_info") || line.startsWith("disable_reconnect") || line.startsWith("enable_reconnect") || line.startsWith("disable_result_log") || line.startsWith("enable_result_log") || line.startsWith("disable_warnings") || line.startsWith("enable_warnings")
+                || line.startsWith("file_exists") || line.startsWith("force-rmdir") || line.startsWith("inc") || line.startsWith("mkdir") || line.startsWith("replace_regex") || line.startsWith("replace_result") || line.startsWith("reset_connection") || line.startsWith("sleep") 
+                || line.startsWith("write_file") || line.toLowerCase().startsWith("exec");
         if (result) {
             writeSkipSqlIntoFile(line);
         }
@@ -167,7 +203,7 @@ public class MySqlTest {
     }
     
     private boolean handlePerl(final String line) throws IOException {
-        if (line.startsWith("--perl")) {
+        if (line.startsWith("--perl") || line.startsWith("perl")) {
             isPerlSkip = true;
             writeSkipSqlIntoFile(line);
         }
@@ -182,14 +218,6 @@ public class MySqlTest {
         return isPerlSkip;
     }
     
-    private String fixDelimiter(final String line) {
-        if ((!line.endsWith("*/") && !line.endsWith("//")) 
-                && (line.endsWith("\\") || line.endsWith("$") || line.endsWith("/"))) {
-            return line.substring(0, line.length() - 1);
-        }
-        return line;
-    }
-    
     private void testParse(final String line) throws IOException {
         total++;
         try {
@@ -201,9 +229,14 @@ public class MySqlTest {
         }
     }
     
-    protected void writeErrorSqlIntoFile(final String sql) throws IOException {
+    protected void writeErrorSqlIntoFile(String sql) throws IOException {
+        sql = sql.trim();
+        // TODO delete
+        if(sql.toLowerCase().startsWith("create ") || sql.toLowerCase().startsWith("select ") || sql.toLowerCase().startsWith("insert ") || sql.toLowerCase().startsWith("update ") || sql.toLowerCase().startsWith("delete ")) {
+            return;
+        }
         Path path = Paths.get("src/main/resources/result/mySql.txt");
-        Files.write(path, (sql.trim() + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+        Files.write(path, (sql + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
     }
     
     protected void writeSkipSqlIntoFile(final String sql) throws IOException {

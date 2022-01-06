@@ -21,15 +21,21 @@ public class UnsupportedGenerator {
             line = line.replace("<", "&lt;");
             String name;
             if (line.contains(" ")) {
-                name = line.substring(0, line.indexOf(" ")).toLowerCase();
+                name = line.substring(0, line.indexOf(" "));
             } else {
-                name = line.toLowerCase();
+                name = line;
             }
             if (!word.equals(name)) {
                 count = 1;
                 word = name;
             }
-            String newLine = "<sql-case id=\"" + name + "_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
+            String newLine;
+            if (Character.isLowerCase(name.charAt(0))) {
+                newLine = "<sql-case id=\"" + "low_"+ name + "_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
+            } else {
+                newLine = "<sql-case id=\"" + name.toLowerCase() + "_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
+            }
+            
             write(newLine);
         }
     }
