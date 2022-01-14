@@ -15,7 +15,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class PostgreSqlTest {
@@ -23,6 +26,22 @@ public class PostgreSqlTest {
     protected Long passed = 0L;
     
     protected Long total = 0L;
+    
+    private String delimiter = ";";
+    
+    private HashSet<String> dollarSet = new HashSet<>();
+    
+    private HashSet<String> quotSet = new HashSet<>();
+    
+    private boolean docComment = false;
+    
+    private final StringBuilder stringBuilder = new StringBuilder();
+    
+    private final Pattern pattern = Pattern.compile("\\$[A-Za-z]*?\\$");
+    
+    private final Pattern quotPattern = Pattern.compile("'");
+    
+    private final Pattern commentPattern = Pattern.compile("\\/\\*|\\*\\/");
     
     final private CacheOption cacheOption = new CacheOption(128, 1024L, 4);
     final private SQLParserEngine parserEngine = new SQLParserEngine("PostgreSQL", cacheOption, false);
@@ -37,49 +56,37 @@ public class PostgreSqlTest {
         for (Path each : Files.list(path).collect(Collectors.toList())) {
             if (each.getFileName().toString().endsWith(".sql")) {
                 testPerFile(each);
+                clearStatus();
             }
         }
+    }
+    
+    private void clearStatus() {
+        dollarSet.clear();
+        stringBuilder.setLength(0);
+        quotSet.clear();
+        docComment = false;
     }
     
     private void testPerFile(final Path each) throws IOException {
         BufferedReader bufferedReader = Files.newBufferedReader(each);
         String line;
-        StringBuilder stringBuilder = new StringBuilder();
-        boolean needSkip = false;
-        boolean isDoubleDollar = false;
         while ((line = bufferedReader.readLine()) != null) {
-            if (line.startsWith("DO $x$")) {
-                needSkip = true;
-            }
-            if (line.startsWith("$x$")) {
-                needSkip = false;
-                continue;
-            }
-            if (needSkip) {
-                continue;
-            }
-            if (line.trim().startsWith("--") || line.trim().startsWith("#") || line.trim().equals("") || line.trim().startsWith("\\d+") || line.trim().startsWith("\\d") || line.trim().startsWith("\\!")) {
-                continue;
-            }
-            if (line.contains("$$") && line.indexOf("$$") == line.lastIndexOf("$$") && !isDoubleDollar) {
-                isDoubleDollar = true;
-                stringBuilder.append(line);
-                continue;
-            }
-            if (line.contains("$$") && line.indexOf("$$") == line.lastIndexOf("$$") && isDoubleDollar) {
-                isDoubleDollar = false;
-            }
-            if (isDoubleDollar) {
-                stringBuilder.append(" ").append(line);
-                continue;
-            }
-            if (line.endsWith(";")) {
+            if(handleComment(line)) continue;
+            if (handleEmptyLine(line)) continue;
+            if (handleTestCommand(line)) continue;
+            line = handleLastLineComment(line);
+            handleDollar(line);
+            handleQuot(line);
+            handleDocComment(line);
+            if (line.trim().endsWith(delimiter) && dollarSet.isEmpty() && quotSet.isEmpty() && !docComment) {
                 if (stringBuilder.length() == 0) {
                     testParse(line);
+                    clearStatus();
                 } else {
                     stringBuilder.append(" ").append(line);
                     testParse(stringBuilder.toString());
-                    stringBuilder.setLength(0);
+                    clearStatus();
                 }
             } else {
                 if (stringBuilder.length() == 0) {
@@ -87,7 +94,63 @@ public class PostgreSqlTest {
                 } else {
                     stringBuilder.append(" ").append(line);
                 }
-
+            }
+        }
+    }
+    
+    private void handleDocComment(final String line) {
+        Matcher matcher = commentPattern.matcher(line);
+        while(matcher.find()) {
+            docComment = !docComment;
+        }
+    }
+    
+    private String handleLastLineComment(final String line) {
+        int index = line.trim().indexOf(" --");
+        if (index > 0) {
+            return line.substring(0, index);
+        }
+        return line;
+    }
+    
+    private void handleQuot(final String line) {
+        Matcher matcher = quotPattern.matcher(line);
+        while (matcher.find()) {
+            String s = line.substring(matcher.start(), matcher.end());
+            if (quotSet.contains(s)) {
+                quotSet.remove(s);
+            } else {
+                quotSet.add(s);
+            }
+        }
+    }
+    
+    private boolean handleTestCommand(final String line) {
+        return line.trim().startsWith("\\d+") || line.trim().startsWith("\\d") || line.trim().startsWith("\\!")
+                || line.trim().startsWith("\\pset") || line.trim().startsWith("\\set") || line.trim().startsWith(":init_range_parted")
+                || line.trim().startsWith(":show_data") || line.trim().startsWith("\\echo") || line.trim().startsWith("\\a\\t")
+                || line.trim().startsWith("\\c") || line.trim().startsWith("\\copy") || line.startsWith("\\.")
+                || line.trim().startsWith("\\z") || line.trim().startsWith("\\crosstabview") || line.trim().startsWith("\\p")
+                || line.trim().startsWith("\\r") || line.trim().startsWith("\\if") || line.trim().startsWith("\\elif")
+                || line.trim().startsWith("\\else") || line.trim().startsWith("\\endif");
+    }
+    
+    private boolean handleEmptyLine(final String line) {
+        return line.trim().equals("");
+    }
+    
+    private boolean handleComment(final String line) {
+        return line.trim().startsWith("--") || line.trim().startsWith("#");
+    }
+    
+    private void handleDollar(final String line) {
+        Matcher matcher = pattern.matcher(line);
+        while (matcher.find()) {
+            String s = line.substring(matcher.start(), matcher.end());
+            if (dollarSet.contains(s)) {
+                dollarSet.remove(s);
+            } else {
+                dollarSet.add(s);
             }
         }
     }

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
@@ -21,7 +22,12 @@ public class AnalysisTest {
     public static void analysisMySql() throws IOException {
         List<String> lines = Files.readAllLines(Paths.get("/Users/chenchuxin/Documents/GitHub/extract-sql-for-shardingsphere-parser-test/src/main/resources/result/mySql.txt"));
         Collections.sort(lines);
-        Files.write(Paths.get("src/main/resources/analysis/mysql-analysis.txt"), lines, StandardOpenOption.APPEND);
+        Path path = Paths.get("src/main/resources/analysis/mysql-analysis.txt");
+        Files.write(path, lines, StandardOpenOption.APPEND);
+        appendPercent(lines, path);
+    }
+    
+    private static void appendPercent(final List<String> lines, final Path path) throws IOException {
         Map<String, BigDecimal> map = new HashMap<>();
         for (String each : lines) {
             if (each.contains(" ")) {
@@ -38,13 +44,15 @@ public class AnalysisTest {
         }
         for (Map.Entry<BigDecimal, String> entry : sorted.entrySet()) {
             String s = String.format("this type %s percentage is %s \n", entry.getValue(), entry.getKey().divide(new BigDecimal(lines.size()), 4, RoundingMode.HALF_EVEN));
-            Files.write(Paths.get("src/main/resources/analysis/mysql-analysis.txt"), s.getBytes(), StandardOpenOption.APPEND);
+            Files.write(path, s.getBytes(), StandardOpenOption.APPEND);
         }
     }
     
     public static void analysisPostgreSql() throws IOException {
         List<String> lines = Files.readAllLines(Paths.get("/Users/chenchuxin/Documents/GitHub/extract-sql-for-shardingsphere-parser-test/src/main/resources/result/postgreSql.txt"));
         Collections.sort(lines);
-        Files.write(Paths.get("src/main/resources/analysis/postgresql-analysis.txt"), lines, StandardOpenOption.APPEND);
+        Path path = Paths.get("src/main/resources/analysis/postgresql-analysis.txt");
+        Files.write(path, lines, StandardOpenOption.APPEND);
+        appendPercent(lines, path);
     }
 }

@@ -231,10 +231,6 @@ public class MySqlTest {
     
     protected void writeErrorSqlIntoFile(String sql) throws IOException {
         sql = sql.trim();
-        // TODO delete
-        if(sql.toLowerCase().startsWith("create ") || sql.toLowerCase().startsWith("select ") || sql.toLowerCase().startsWith("insert ") || sql.toLowerCase().startsWith("update ") || sql.toLowerCase().startsWith("delete ")) {
-            return;
-        }
         Path path = Paths.get("src/main/resources/result/mySql.txt");
         Files.write(path, (sql + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
     }

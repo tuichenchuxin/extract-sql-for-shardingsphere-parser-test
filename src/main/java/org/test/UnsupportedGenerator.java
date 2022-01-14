@@ -31,9 +31,9 @@ public class UnsupportedGenerator {
             }
             String newLine;
             if (Character.isLowerCase(name.charAt(0))) {
-                newLine = "<sql-case id=\"" + "low_"+ name + "_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
+                newLine = "<sql-case id=\"" + "low_"+ name + "_by_postgresql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"PostgreSQL\"/>";
             } else {
-                newLine = "<sql-case id=\"" + name.toLowerCase() + "_by_mysql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"MySQL\"/>";
+                newLine = "<sql-case id=\"" + name.toLowerCase() + "_by_postgresql_source_test_case" + count++ +"\" value=\"" + line + "\" db-types=\"PostgreSQL\"/>";
             }
             
             write(newLine);
