@@ -3,7 +3,7 @@ package org.test;
 import org.apache.shardingsphere.sql.parser.api.CacheOption;
 import org.apache.shardingsphere.sql.parser.api.SQLParserEngine;
 import org.apache.shardingsphere.sql.parser.api.SQLVisitorEngine;
-import org.apache.shardingsphere.sql.parser.core.ParseContext;
+import org.apache.shardingsphere.sql.parser.core.ParseASTNode;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
 
 import java.io.BufferedReader;
@@ -44,8 +44,8 @@ public class PostgreSqlTest {
     private final Pattern commentPattern = Pattern.compile("\\/\\*|\\*\\/");
     
     final private CacheOption cacheOption = new CacheOption(128, 1024L, 4);
-    final private SQLParserEngine parserEngine = new SQLParserEngine("PostgreSQL", cacheOption, false);
-    final private SQLVisitorEngine visitorEngine = new SQLVisitorEngine("PostgreSQL", "STATEMENT", new Properties());
+    final private SQLParserEngine parserEngine = new SQLParserEngine("PostgreSQL", cacheOption);
+    final private SQLVisitorEngine visitorEngine = new SQLVisitorEngine("PostgreSQL", "STATEMENT", false, new Properties());
     
     void test() throws IOException {
         testSQLParse(Paths.get("src/main/resources/postgresql"));
@@ -158,7 +158,7 @@ public class PostgreSqlTest {
     private void testParse(final String line) throws IOException {
         total++;
         try {
-            ParseContext parseContext = parserEngine.parse(line, false);
+            ParseASTNode parseContext = parserEngine.parse(line, false);
             SQLStatement sqlStatement = visitorEngine.visit(parseContext);
             passed++;
         } catch (Exception e) {

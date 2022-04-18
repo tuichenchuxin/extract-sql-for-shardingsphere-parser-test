@@ -3,7 +3,7 @@ package org.test;
 import org.apache.shardingsphere.sql.parser.api.CacheOption;
 import org.apache.shardingsphere.sql.parser.api.SQLParserEngine;
 import org.apache.shardingsphere.sql.parser.api.SQLVisitorEngine;
-import org.apache.shardingsphere.sql.parser.core.ParseContext;
+import org.apache.shardingsphere.sql.parser.core.ParseASTNode;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
 
 import java.io.BufferedReader;
@@ -40,8 +40,8 @@ public class MySqlTest {
     private final StringBuilder multiLineSql = new StringBuilder();
     
     private final CacheOption cacheOption = new CacheOption(128, 1024L, 4);
-    private final SQLParserEngine parserEngine = new SQLParserEngine("MySQL", cacheOption, false);
-    private final SQLVisitorEngine visitorEngine = new SQLVisitorEngine("MySQL", "STATEMENT", new Properties());
+    private final SQLParserEngine parserEngine = new SQLParserEngine("MySQL", cacheOption);
+    private final SQLVisitorEngine visitorEngine = new SQLVisitorEngine("MySQL", "STATEMENT", false, new Properties());
     
     void test() throws IOException {
         testSQLParse(Paths.get("src/main/resources/mysql"));
@@ -221,7 +221,7 @@ public class MySqlTest {
     private void testParse(final String line) throws IOException {
         total++;
         try {
-            ParseContext parseContext = parserEngine.parse(line, false);
+            ParseASTNode parseContext = parserEngine.parse(line, false);
             SQLStatement sqlStatement = visitorEngine.visit(parseContext);
             passed++;
         } catch (Exception e) {
