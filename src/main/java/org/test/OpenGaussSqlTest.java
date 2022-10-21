@@ -21,7 +21,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class PostgreSqlTest {
+public class OpenGaussSqlTest {
     
     protected Long passed = 0L;
     
@@ -44,12 +44,12 @@ public class PostgreSqlTest {
     private final Pattern commentPattern = Pattern.compile("\\/\\*|\\*\\/");
     
     final private CacheOption cacheOption = new CacheOption(128, 1024L);
-    final private SQLParserEngine parserEngine = new SQLParserEngine("PostgreSQL", cacheOption);
-    final private SQLVisitorEngine visitorEngine = new SQLVisitorEngine("PostgreSQL", "STATEMENT", false, new Properties());
+    final private SQLParserEngine parserEngine = new SQLParserEngine("openGauss", cacheOption);
+    final private SQLVisitorEngine visitorEngine = new SQLVisitorEngine("openGauss", "STATEMENT", false, new Properties());
     
     void test() throws IOException {
         testSQLParse(Paths.get("src/main/resources/postgresql"));
-        System.out.printf("PostgreSql Test passed amount %d, total amount %d, Passing rate is %s", passed, total, new BigDecimal(passed).divide(new BigDecimal(total), 5, RoundingMode.HALF_UP));
+        System.out.printf("openGauss Test passed amount %d, total amount %d, Passing rate is %s", passed, total, new BigDecimal(passed).divide(new BigDecimal(total), 5, RoundingMode.HALF_UP));
     }
     
     protected void testSQLParse(final Path path) throws IOException {
@@ -160,14 +160,20 @@ public class PostgreSqlTest {
         try {
             ParseASTNode parseContext = parserEngine.parse(line, false);
             SQLStatement sqlStatement = visitorEngine.visit(parseContext);
+            writeCorrectSQLIntoFile(line);
             passed++;
         } catch (Exception e) {
             writeErrorSqlIntoFile(line);
         }
     }
     
+    private void writeCorrectSQLIntoFile(final String sql) throws IOException {
+        Path path = Paths.get("src/main/resources/result/opengauss_correct.txt");
+        Files.write(path,(sql.trim() + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+    }
+    
     protected void writeErrorSqlIntoFile(final String sql) throws IOException {
-        Path path = Paths.get("src/main/resources/result/postgreSql.txt");
+        Path path = Paths.get("src/main/resources/result/opengauss.txt");
         Files.write(path,(sql.trim() + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
     }
 }

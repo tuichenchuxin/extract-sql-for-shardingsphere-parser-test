@@ -11,7 +11,7 @@
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <shardingsphere.version>5.1.2-SNAPSHOT</shardingsphere.version>
+        <shardingsphere.version>5.2.2-SNAPSHOT</shardingsphere.version>
     </properties>
     <dependencies>
         <dependency>
@@ -42,6 +42,11 @@
         <dependency>
             <groupId>org.apache.shardingsphere</groupId>
             <artifactId>shardingsphere-sql-parser-sqlserver</artifactId>
+            <version>${shardingsphere.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shardingsphere</groupId>
+            <artifactId>shardingsphere-sql-parser-opengauss</artifactId>
             <version>${shardingsphere.version}</version>
         </dependency>
     </dependencies>

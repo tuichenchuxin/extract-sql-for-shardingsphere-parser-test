@@ -7,8 +7,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -17,6 +19,30 @@ public class AnalysisTest {
     public static void main(String[] args) throws IOException {
         analysisMySql();
         analysisPostgreSql();
+        analysisOpenGauss();
+    }
+    
+    private static void analysisOpenGauss() throws IOException {
+        List<String> lines = Files.readAllLines(Paths.get("/Users/chenchuxin/Documents/GitHub/extract-sql-for-shardingsphere-parser-test/src/main/resources/result/opengauss.txt"));
+        lines = new ArrayList<>(new LinkedHashSet<>(lines));
+        Collections.sort(lines);
+        List<String> result = new ArrayList<>(lines.size());
+        for (String each : lines) {
+            result.add(replaceSpace(each));
+        }
+        Path path = Paths.get("src/main/resources/analysis/opengauss-analysis.txt");
+        Files.write(path, result, StandardOpenOption.APPEND);
+    }
+    
+    private static String replaceSpace(final String sql) {
+        String result = sql;
+        if (sql.contains("  ")) {
+            result = replaceSpace(sql.replaceAll("  ", " "));
+        }
+        if (sql.contains("\t")) {
+            result = replaceSpace(sql.replaceAll("\t", " "));
+        }
+        return result;
     }
     
     public static void analysisMySql() throws IOException {

@@ -15,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Locale;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -39,7 +38,7 @@ public class MySqlTest {
     
     private final StringBuilder multiLineSql = new StringBuilder();
     
-    private final CacheOption cacheOption = new CacheOption(128, 1024L, 4);
+    private final CacheOption cacheOption = new CacheOption(128, 1024L);
     private final SQLParserEngine parserEngine = new SQLParserEngine("MySQL", cacheOption);
     private final SQLVisitorEngine visitorEngine = new SQLVisitorEngine("MySQL", "STATEMENT", false, new Properties());
     
